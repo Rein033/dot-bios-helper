@@ -155,6 +155,10 @@ python KodeOS/tools/kcli.py -p PORT install build/dot_bios_helper.bin
 - `app.c`: the Active Object. It ticks the player, draws the glass (`ui.c`), reads and writes the card through AO_Storage, and takes the editor's commands.
 - `web.c` with `web/index.html`: the editor.
 
+## On the Kode-watch
+
+`watch/` is the same language and player as the BIOS helper app of Kode-watch OS (ESP32-S3). It reads profiles from `/data/bios*.txt` and has no web editor. See `watch/README.md`.
+
 ## Licence
 
 GPL-3.0-or-later, like the kode-sdk it links: see `LICENSE`. The fonts are Outfit and Terminus (SIL OFL 1.1, `tools/fonts/`). Kode, Kode Dot and kodeOS are trademarks of Kode; this app uses them only to say what it runs on.
