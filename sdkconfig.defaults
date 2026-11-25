@@ -1,0 +1,25 @@
+# This app's own settings. The board's (flash, PSRAM, cache, the console) arrive from kbsp's
+# sdkconfig.board, which CMakeLists.txt fetches and reads first. Do not copy them here.
+
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="managed_components/kodediy__kbsp/partitions.csv"
+
+# The role AO_Boot plays: this firmware never writes otadata, so any reset returns to kodeOS.
+CONFIG_KODEOS_BOOT_ROLE_APP=y
+
+# The console over the USB-C cable (unless the keyboard is moved there in Settings).
+CONFIG_KODEOS_CONSOLE=y
+
+# The dock pads are this app's keyboard: no kodeOS console on them.
+# CONFIG_KHAL_CONSOLE_DOCK is not set
+
+# Wi-Fi for the web editor: AO_Radio, Wi-Fi and AO_Net. No MQTT, channel or BLE.
+CONFIG_KODEOS_RADIO=y
+CONFIG_KODEOS_WIFI=y
+CONFIG_KODEOS_NET=y
+CONFIG_KODEOS_MQTT=n
+CONFIG_KODEOS_CHANNEL=n
+CONFIG_KODEOS_BLE=n
+
+# The editor: browsers send long headers.
+CONFIG_HTTPD_MAX_REQ_HDR_LEN=2048
+CONFIG_HTTPD_MAX_URI_LEN=256

@@ -1,0 +1,9 @@
+## kode-sdk pinned at one version: everything below the facade (kaos, kqp, khal, kdrv, klog,
+## kbsp, QP/C) arrives at the same commit. TinyUSB is the raw stack: this app brings its own
+## descriptors and tusb_config.h (main/tusb/), so esp_tinyusb is not needed.
+dependencies:
+  kodediy/kode:
+    git: https://github.com/kodediy/kode-sdk.git
+    path: components/kode
+    version: v0.1.1
+  espressif/tinyusb: "~0.21.0"

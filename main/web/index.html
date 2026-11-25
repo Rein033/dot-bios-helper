@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dot BIOS Helper</title>
+<style>
+:root { --bg:#000; --card:#1e1d1c; --card2:#2c2a28; --ink:#ded7cd; --dim:#c2bab3; --faint:#8a8680;
+        --yel:#ffac00; --blue:#028ac2; --red:#e5484d; --green:#3dbe6e; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { display:flex; align-items:center; gap:14px; padding:14px 20px; border-bottom:1px solid var(--card2); flex-wrap:wrap; }
+header h1 { font-size:20px; margin:0; }
+.pill { border:0; border-radius:999px; padding:8px 16px; font:inherit; font-weight:600; cursor:pointer; background:var(--card2); color:var(--ink); }
+.pill.y { background:var(--yel); color:#191919; }
+.pill.r { background:var(--red); color:#fff; }
+.pill:disabled { opacity:.4; cursor:default; }
+.dot { width:10px; height:10px; border-radius:50%; display:inline-block; background:var(--faint); margin-right:6px; }
+.dot.on { background:var(--green); }
+main { display:grid; grid-template-columns:260px 1fr 330px; gap:16px; padding:16px 20px; }
+@media (max-width:1100px) { main { grid-template-columns:1fr; } }
+section { background:var(--card); border-radius:14px; padding:14px; }
+h2 { font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--faint); margin:0 0 10px; }
+#list button { display:block; width:100%; text-align:left; background:none; border:0; color:var(--dim); padding:8px 10px; border-radius:10px; cursor:pointer; font:inherit; }
+#list button.sel { background:var(--card2); color:var(--ink); box-shadow:inset 4px 0 var(--yel); }
+#list small { display:block; color:var(--faint); }
+#list .err { color:var(--red); }
+.tag { font-size:11px; padding:1px 7px; border-radius:999px; background:var(--card2); color:var(--faint); margin-left:6px; }
+.row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+input[type=text] { background:#111; border:1px solid var(--card2); color:var(--ink); border-radius:10px; padding:8px 10px; font:inherit; }
+.ed { display:flex; border:1px solid var(--card2); border-radius:10px; overflow:hidden; background:#0b0b0b; }
+#nums { padding:10px 6px; color:var(--faint); text-align:right; font:13px/1.55 ui-monospace, Menlo, monospace; user-select:none; white-space:pre; min-width:34px; }
+#text { flex:1; min-height:420px; border:0; outline:0; resize:vertical; background:transparent; color:var(--ink); padding:10px; font:13px/1.55 ui-monospace, Menlo, monospace; white-space:pre; }
+#errs { margin-top:8px; font-size:14px; min-height:22px; }
+#errs .bad { color:var(--red); cursor:pointer; }
+#errs .ok { color:var(--green); }
+.chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.chip { background:var(--card2); border:0; color:var(--ink); border-radius:8px; padding:5px 9px; font:12px ui-monospace, Menlo, monospace; cursor:pointer; }
+.chip.c { color:var(--yel); }
+.chip.s { color:var(--blue); }
+#live .big { font-size:22px; font-weight:700; margin:6px 0; min-height:30px; word-break:break-word; }
+#live .st { color:var(--yel); font-weight:700; text-transform:uppercase; letter-spacing:.06em; }
+.bar { height:8px; background:var(--card2); border-radius:4px; overflow:hidden; margin:8px 0 12px; }
+.bar i { display:block; height:100%; background:var(--yel); width:0; }
+.muted { color:var(--faint); font-size:13px; }
+details summary { cursor:pointer; color:var(--dim); margin:6px 0; }
+code { color:var(--yel); }
+#toast { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:var(--card2); padding:10px 18px; border-radius:999px; display:none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Dot BIOS Helper</h1>
+  <span id="pc"><span class="dot"></span>…</span>
+  <span class="muted" id="ver"></span>
+</header>
+<main>
+  <section>
+    <h2>Profiles</h2>
+    <div id="list"></div>
+    <div class="row" style="margin-top:10px">
+      <button class="pill" onclick="newProfile()">New</button>
+      <button class="pill" onclick="cmd('reload').then(()=>setTimeout(loadList,1500))">Read card again</button>
+    </div>
+    <p class="muted">Saved on the Dot's microSD card in <code>/bioshelper/</code>. A built-in profile you save goes to the card and replaces the built-in.</p>
+  </section>
+
+  <section>
+    <h2>Editor</h2>
+    <div class="row">
+      <label class="muted">File</label>
+      <input type="text" id="name" size="26" spellcheck="false" placeholder="my-profile">
+      <span class="muted">.txt</span>
+      <button class="pill y" onclick="save()">Save</button>
+      <button class="pill" onclick="useIt()">Use on the Dot</button>
+      <button class="pill r" id="del" onclick="del()">Delete</button>
+    </div>
+    <div class="chips" id="cmds"></div>
+    <div class="chips" id="keys"></div>
+    <div class="ed"><div id="nums">1</div><textarea id="text" spellcheck="false"></textarea></div>
+    <div id="errs"></div>
+    <details>
+      <summary>The language in short</summary>
+      <div class="muted" style="line-height:1.7">
+        <b>Settings</b>: <code>title</code> <code>desc</code>
+        <code>arm manual|plug|delay N</code> (plug: starts when a PC takes the keyboard, as it boots)
+        <code>after stop|rearm|chain &lt;title&gt;</code> (rearm: next PC after unplugging)
+        <code>confirm on</code> <code>timeout MIN</code><br>
+        <b>Commands</b>: <code>spam KEY SECS [MS]</code> <code>keys K K*3 CTRL+ALT+DEL</code>
+        <code>hold KEY MS</code> <code>type text</code> <code>line text</code> <code>wait 500 | 2s</code>
+        <code>waitpc [SECS]</code> <code>ask text</code> <code>msg text</code> <code>code [N]</code>
+        <code>input NAME [N] prompt</code> <code>set NAME value</code> (use as <code>$NAME</code>)
+        <code>repeat N … end</code> <code>gap MS</code> <code>tap MS</code> <code>beep</code>. <code>#</code> starts a comment.
+      </div>
+    </details>
+  </section>
+
+  <section id="live">
+    <h2>On the Dot</h2>
+    <div class="st" id="lst">idle</div>
+    <div id="ltitle" class="muted"></div>
+    <div class="big" id="ltext"></div>
+    <div class="muted" id="linfo"></div>
+    <div class="bar"><i id="lbar"></i></div>
+    <div class="row" id="lbtns"></div>
+    <div class="row" id="lcode" style="display:none">
+      <input type="text" id="code" size="10" inputmode="numeric" placeholder="digits">
+      <button class="pill y" onclick="cmd('code '+code.value);code.value=''">Send</button>
+    </div>
+    <h2 style="margin-top:18px">Keyboard</h2>
+    <div class="chips" id="remote"></div>
+    <div class="row">
+      <input type="text" id="typ" placeholder="type into the PC" style="flex:1">
+      <button class="pill" onclick="cmd('type '+typ.value);typ.value=''">Type</button>
+    </div>
+    <p class="muted">Keys go to the PC the Dot is plugged into, now.</p>
+  </section>
+</main>
+<div id="toast"></div>
+<script>
+const $ = id => document.getElementById(id);
+let profiles = [], cur = null, timer = null, st = {};
+const CMDS = [
+  ['title','title My profile','s'],['desc','desc What it does','s'],['arm plug','arm plug','s'],['arm delay','arm delay 5','s'],
+  ['after rearm','after rearm','s'],['confirm','confirm on','s'],['timeout','timeout 30','s'],
+  ['spam','spam F10 10','c'],['keys','keys DOWN ENTER','c'],['hold','hold F12 2000','c'],['type','type hello','c'],
+  ['line','line hello','c'],['wait','wait 1s','c'],['waitpc','waitpc 60','c'],['ask','ask Is the menu open?','c'],
+  ['msg','msg Saving','c'],['code','code 4','c'],['input','input tag 6 Asset tag','c'],['set','set who IT','c'],
+  ['repeat','repeat 3\n  keys DOWN\nend','c'],['gap','gap 300','c'],['tap','tap 40','c'],['beep','beep','c']];
+const KEYS = ['ESC','F1','F2','F9','F10','F11','F12','DEL','ENTER','TAB','SPACE','UP','DOWN','LEFT','RIGHT','HOME','END','PGUP','PGDN','CTRL+ALT+DEL','WIN+R','ALT+F4','SHIFT+TAB'];
+
+function toast(t) { const e = $('toast'); e.textContent = t; e.style.display = 'block'; clearTimeout(e._t); e._t = setTimeout(() => e.style.display = 'none', 2500); }
+async function cmd(c) { const r = await fetch('/api/cmd', {method:'POST', body:c}); if (!r.ok) toast(await r.text()); }
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+async function loadList(selectName) {
+  profiles = await (await fetch('/api/profiles')).json();
+  const L = $('list'); L.innerHTML = '';
+  for (const p of profiles) {
+    const b = document.createElement('button');
+    b.className = (cur && cur === p.name) ? 'sel' : '';
+    b.innerHTML = esc(p.title) + (p.card ? '<span class="tag">card</span>' : '<span class="tag">built-in</span>') +
+      (p.errors ? `<small class="err">${p.errors} error(s): line ${p.error_line}</small>` : `<small>${esc(p.arm)}${p.desc ? ' · ' + esc(p.desc) : ''}</small>`);
+    b.onclick = () => open(p.name);
+    L.appendChild(b);
+  }
+  if (selectName) open(selectName);
+  else if (!cur && profiles.length) open(st.name && profiles.find(p => p.name === st.name) ? st.name : profiles[0].name);
+}
+
+async function open(name) {
+  cur = name;
+  const t = await (await fetch('/api/profile?name=' + encodeURIComponent(name))).text();
+  $('text').value = t; $('name').value = name;
+  const p = profiles.find(p => p.name === name);
+  $('del').disabled = !(p && p.card);
+  $('del').textContent = p && p.card && p.builtin ? 'Delete (back to built-in)' : 'Delete';
+  for (const b of $('list').children) b.classList.toggle('sel', b.textContent.startsWith(p ? p.title : '\u0000'));
+  nums(); check();
+}
+
+function newProfile() {
+  cur = null; $('name').value = 'my-profile';
+  $('text').value = 'title My profile\ndesc What it does\narm plug\nconfirm on\n\nspam F10 10\nwait 2s\nkeys DOWN ENTER\nbeep\n';
+  $('del').disabled = true; nums(); check(); $('name').focus();
+}
+
+function nums() { const n = $('text').value.split('\n').length; $('nums').textContent = Array.from({length:n}, (_, i) => i + 1).join('\n'); }
+
+async function check() {
+  const r = await (await fetch('/api/check', {method:'POST', body:$('text').value})).json();
+  showErrs(r);
+  return r;
+}
+function showErrs(r) {
+  const E = $('errs');
+  if (!r.error_count) { E.innerHTML = `<span class="ok">OK: ${r.commands} commands, ${esc(r.arm)}</span>`; return; }
+  E.innerHTML = r.errors.map(e => `<div class="bad" data-l="${e.line}">Line ${e.line}: ${esc(e.msg)}</div>`).join('') +
+    (r.error_count > r.errors.length ? `<div class="bad">… ${r.error_count - r.errors.length} more</div>` : '');
+  for (const d of E.querySelectorAll('[data-l]')) d.onclick = () => goLine(+d.dataset.l);
+}
+function goLine(l) {
+  const ta = $('text'), lines = ta.value.split('\n'); let p = 0;
+  for (let i = 0; i < l - 1; i++) p += lines[i].length + 1;
+  ta.focus(); ta.setSelectionRange(p, p + (lines[l - 1] || '').length);
+}
+
+async function save() {
+  const name = $('name').value.trim().toLowerCase();
+  if (!/^[a-z0-9_-]{1,39}$/.test(name)) { toast('File name: a-z, 0-9, - and _'); return; }
+  const r = await fetch('/api/save?name=' + name, {method:'POST', body:$('text').value});
+  if (!r.ok) { toast(await r.text()); return; }
+  const j = await r.json(); showErrs(j);
+  toast(j.saved ? (j.error_count ? 'Saved, but it has errors' : 'Saved to the card') : 'Not saved: is there a card in the Dot? (' + j.rc + ')');
+  if (j.saved) { cur = name; await loadList(); open(name); }
+}
+async function del() {
+  if (!cur || !confirm('Delete ' + cur + '.txt from the card?')) return;
+  const j = await (await fetch('/api/delete?name=' + cur, {method:'POST'})).json();
+  toast(j.deleted ? 'Deleted' : 'Not deleted (' + j.rc + ')'); cur = null; loadList();
+}
+async function useIt() { if (cur) { await cmd('select ' + cur); toast('Selected on the Dot'); } }
+
+function insert(snippet) {
+  const ta = $('text'), v = ta.value, p = ta.selectionStart;
+  const lineStart = v.lastIndexOf('\n', p - 1) + 1, lineEnd = v.indexOf('\n', p) < 0 ? v.length : v.indexOf('\n', p);
+  const line = v.slice(lineStart, lineEnd);
+  let nv, np;
+  if (line.trim() === '') { nv = v.slice(0, lineStart) + snippet + v.slice(lineEnd); np = lineStart + snippet.length; }
+  else { nv = v.slice(0, lineEnd) + '\n' + snippet + v.slice(lineEnd); np = lineEnd + 1 + snippet.length; }
+  ta.value = nv; ta.focus(); ta.setSelectionRange(np, np); nums(); sched();
+}
+function addKey(k) {
+  const ta = $('text'), v = ta.value, p = ta.selectionStart;
+  const lineStart = v.lastIndexOf('\n', p - 1) + 1, lineEnd = v.indexOf('\n', p) < 0 ? v.length : v.indexOf('\n', p);
+  const line = v.slice(lineStart, lineEnd);
+  if (/^\s*(keys|key|press)\b/i.test(line)) { const nv = v.slice(0, lineEnd) + ' ' + k + v.slice(lineEnd); ta.value = nv; const np = lineEnd + k.length + 1; ta.focus(); ta.setSelectionRange(np, np); nums(); sched(); }
+  else insert('keys ' + k);
+}
+function sched() { clearTimeout(timer); timer = setTimeout(check, 400); }
+
+function chips() {
+  for (const [label, snip, kind] of CMDS) { const b = document.createElement('button'); b.className = 'chip ' + kind; b.textContent = label; b.title = snip; b.onclick = () => insert(snip); $('cmds').appendChild(b); }
+  for (const k of KEYS) {
+    const b = document.createElement('button'); b.className = 'chip'; b.textContent = k; b.title = 'add to the keys line'; b.onclick = () => addKey(k); $('keys').appendChild(b);
+    const r = document.createElement('button'); r.className = 'chip'; r.textContent = k; r.onclick = () => cmd('key ' + k); $('remote').appendChild(r);
+  }
+}
+
+function liveButtons(s) {
+  const B = []; const add = (t, c, cls) => B.push(`<button class="pill ${cls || ''}" onclick="cmd('${c}')">${t}</button>`);
+  switch (s.state) {
+    case 'idle': case 'done':
+      if (s.rearm_wait) add('Stop batch', 'stop'); else add(s.state === 'done' ? 'Again' : 'Start / Arm', 'start', 'y'); break;
+    case 'confirm': add('Yes, go', 'yes', 'y'); add('No', 'no'); break;
+    case 'armed': case 'countdown': add('Go now', 'go', 'y'); add('Disarm', 'stop'); break;
+    case 'spam': case 'ask': case 'waitpc': add('Next', 'next', 'y'); add('Stop', 'stop'); break;
+    default: add('Stop', 'stop', 'r');
+  }
+  $('lbtns').innerHTML = B.join('');
+}
+
+async function poll() {
+  try {
+    st = await (await fetch('/api/state')).json();
+    $('pc').innerHTML = `<span class="dot ${st.host ? 'on' : ''}"></span>${st.keyboard ? (st.host ? 'PC connected' : 'No PC') : 'Keyboard did not start'} · ${st.port}` + (st.card ? '' : ' · no card');
+    $('ver').textContent = 'v' + st.version;
+    $('lst').textContent = st.state === 'armed' && st.need_unplug ? 'armed · unplug first' : st.state;
+    $('ltitle').textContent = st.title;
+    $('ltext').textContent = st.state === 'idle' ? (st.note || '') : st.text;
+    let info = '';
+    if (st.steps && !['idle', 'confirm', 'armed', 'countdown'].includes(st.state)) info = `Step ${Math.min(st.step + 1, st.steps)} of ${st.steps}`;
+    if (st.left_ms) info += (info ? ' · ' : '') + (st.state === 'armed' ? 'disarms in ' + Math.ceil(st.left_ms / 60000) + ' min' : Math.ceil(st.left_ms / 1000) + ' s');
+    if (st.runs) info += (info ? ' · ' : '') + st.runs + ' run(s)';
+    $('linfo').textContent = info;
+    $('lbar').style.width = st.steps ? (100 * Math.min(st.step, st.steps) / st.steps) + '%' : '0';
+    $('lcode').style.display = st.state === 'entry' ? 'flex' : 'none';
+    liveButtons(st);
+  } catch (e) { $('pc').innerHTML = '<span class="dot"></span>The Dot does not answer'; }
+}
+
+$('text').addEventListener('input', () => { nums(); sched(); });
+$('text').addEventListener('scroll', () => { $('nums').scrollTop = $('text').scrollTop; });
+chips(); poll().then(() => loadList()); setInterval(poll, 800);
+</script>
+</body>
+</html>
