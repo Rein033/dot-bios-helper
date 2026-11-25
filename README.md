@@ -8,6 +8,10 @@ Profiles are plain text files on the Dot's microSD card. You edit them in a brow
 
 Dot BIOS Helper is an independent app. Kode did not make it and does not endorse it.
 
+| Profiles | Armed | Tapping F10 | BIOS code | Keyboard |
+|---|---|---|---|---|
+| ![The list](appdata/screenshots/1.png) | ![Armed](appdata/screenshots/2.png) | ![Spam](appdata/screenshots/3.png) | ![Keypad](appdata/screenshots/4.png) | ![Keyboard](appdata/screenshots/5.png) |
+
 ## Using it
 
 1. Start **BIOS Helper** from Apps.
